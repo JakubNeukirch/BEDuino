@@ -18,6 +18,11 @@ class MainViewModel(
     private val _bluetoothService: BluetoothService,
     private val _bluetoothStateService: BluetoothStateService
 ) : ViewModel() {
+    companion object {
+        private const val MODE_PULSE = 0
+        private const val MODE_STATIC = 1
+    }
+
     private val _disposables = CompositeDisposable()
     private var _scanDisposable: Disposable? = null
     private var _foundDevice: BluetoothDevice? = null
@@ -27,7 +32,7 @@ class MainViewModel(
     val sendingState = MutableLiveData<SendingState>()
 
     fun findAndConnect() {
-        if (_foundDevice == null) {
+        if (_foundDevice == null && _scanDisposable == null) {
             _scanDisposable = _bluetoothService.scanDevices(listOf("XM-15"))
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
@@ -46,19 +51,35 @@ class MainViewModel(
         }
     }
 
-    fun turnLed() {
+    fun pulseLed(red: Int, green: Int, blue: Int) {
+        sendToLED(MODE_PULSE ,red, green, blue)
+    }
+
+    fun turnLed(red: Int, green: Int, blue: Int) {
+        sendToLED(MODE_STATIC ,red, green, blue)
+    }
+
+    private fun sendToLED(mode: Int, red: Int, green: Int, blue: Int) {
         _messenger?.let { messenger ->
-         _disposables += messenger.send("a")
-             .subscribeOn(Schedulers.io())
-             .observeOn(AndroidSchedulers.mainThread())
-             .subscribeBy(
-                 onComplete = {
-                     sendingState.value = SendingState.SENT
-                 },
-                 onError = {
-                     sendingState.value = SendingState.ERROR_SENDING
-                 }
-             )
+            _disposables += messenger.send(
+                byteArrayOf(
+                    mode.toByte(),
+                    red.toByte(),
+                    green.toByte(),
+                    blue.toByte(),
+                    '\n'.toByte()
+                )
+            )
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribeBy(
+                    onComplete = {
+                        sendingState.value = SendingState.SENT
+                    },
+                    onError = {
+                        sendingState.value = SendingState.ERROR_SENDING
+                    }
+                )
         }
     }
 
