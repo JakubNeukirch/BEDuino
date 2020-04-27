@@ -45,7 +45,9 @@ class BluetoothMessengerImpl(private val _context: Context, private val _device:
             .doOnNext { Log.i("Messenger", it) }
             .doOnError { Log.i("Messenger", "$it") }
             .doFinally { reader?.close() }
-            .subscribe()
+            .subscribe(
+                {},{}
+            )
 
     }
 
